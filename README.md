@@ -1,6 +1,7 @@
 # Live Stocks App
  A “single page” (SPA) app to display live stock data. Below are the essential data points that we need to show along with certain client requirements.
 
+Project Live at : [https://mock-live-stock-app.web.app/](https://mock-live-stock-app.web.app/)
 ## Problem Statement 
 
 Your app should subscribe for updates via WebSockets 

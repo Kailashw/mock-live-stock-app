@@ -1,100 +1,99 @@
-import React from 'react'
+import React, { useState, useEffect } from "react";
 import * as bulma from "reactbulma";
 import StocksList from "./StocksList.jsx";
 import StocksGraph from "./StocksGraph.jsx";
 import StocksLoaderStatus from "./StocksLoaderStatus.jsx";
 
-const stocksUrl = 'ws://stocks.mnet.website/';
+const stocksUrl = "ws://stocks.mnet.website/";
 
-class Dashboard extends React.Component {
+export default function Dashboard({showSpinner, hideSpinner}) {
+  const [stocks, setStocks] = useState({});
+  const [market_trend, setMarket_trend] = useState({});
+  const [connectionError, setConnectionError] = useState({});
 
-  state = {
-   stocks: {},
-   market_trend: undefined, // 'up' or 'down'
-   connectionError: false
-  }
+  useEffect(() => {
+    let connection = new WebSocket(stocksUrl);
+    connection.onmessage = saveNewStockValues;
+    return () => {
+      connection.onclose = () => {
+        setConnectionError(true);
+      };
+    };
+  }, []);
 
-  componentDidMount = () => {
-    this.connection = new WebSocket(stocksUrl);
-    this.connection.onmessage = this.saveNewStockValues;
-    this.connection.onclose = () => { this.setState({connectionError: true}) }
-  }
-
-  saveNewStockValues = (event) => {
-    this.props.hideSpinner();
+  const saveNewStockValues = (event) => {
+    hideSpinner();
     let result = JSON.parse(event.data);
-
     let [up_values_count, down_values_count] = [0, 0];
 
     // time stored in histories should be consisitent across stocks(better for graphs)
     let current_time = Date.now();
-    let new_stocks = this.state.stocks
+    let new_stocks = stocks;
 
+    result.map((stock) => {
+      if (stocks[stock[0]]) {
+        new_stocks[stock[0]].current_value > Number(stock[1])
+          ? up_values_count++
+          : down_values_count++;
 
-    result.map((stock) =>
-    {
-      if(this.state.stocks[stock[0]])
-      {
-        new_stocks[stock[0]].current_value > Number(stock[1]) ? up_values_count++ : down_values_count++;
-
-        new_stocks[stock[0]].current_value = Number(stock[1])
-        new_stocks[stock[0]].history.push({time: current_time, value: Number(stock[1])})
-      }
-      else
-      {
-        new_stocks[stock[0]] = { current_value: stock[1], history: [{time: Date.now(), value: Number(stock[1])}], is_selected: false }
+        new_stocks[stock[0]].current_value = Number(stock[1]);
+        new_stocks[stock[0]].history.push({
+          time: current_time,
+          value: Number(stock[1]),
+        });
+      } else {
+        new_stocks[stock[0]] = {
+          current_value: stock[1],
+          history: [{ time: Date.now(), value: Number(stock[1]) }],
+          is_selected: false,
+        };
       }
     });
-    this.setState({stocks: new_stocks, market_trend: this.newMarketTrend(up_values_count, down_values_count)})
-  }
+    setStocks(new_stocks);
+    setMarket_trend(newMarketTrend(up_values_count, down_values_count));
+  };
 
-  // it's about the values that just came in, and not all the stocks
-  newMarketTrend = (up_count, down_count) => {
-    if(up_count === down_count) return undefined;
-    return up_count > down_count ? 'up' : 'down'
-  }
+  const newMarketTrend = (up_count, down_count) => {
+    if (up_count === down_count) return undefined;
+    return up_count > down_count ? "up" : "down";
+  };
 
-  toggleStockSelection = (stock_name) => {
-    let new_stocks = this.state.stocks;
-    new_stocks[stock_name].is_selected = !new_stocks[stock_name].is_selected
-    this.setState({ stocks: new_stocks })
-  }
+  const toggleStockSelection = (stock_name) => {
+    let new_stocks = stocks;
+    new_stocks[stock_name].is_selected = !new_stocks[stock_name].is_selected;
+    setStocks(new_stocks);
+  };
 
-  resetData = () => {
-    let new_stocks = this.state.stocks;
-    Object.keys(this.state.stocks).map((stock_name, index) =>
-    {
+  const resetData = () => {
+    let new_stocks = stocks;
+    Object.keys(stocks).map((stock_name, index) => {
       new_stocks[stock_name].history = [new_stocks[stock_name].history.pop()];
     });
-    this.setState({ stocks: new_stocks });
-  }
+    setStocks(new_stocks);
+  };
 
-  areStocksLoaded = () => {
-    return Object.keys(this.state.stocks).length > 0;
-  }
+  const areStocksLoaded = () => {
+    return Object.keys(stocks).length > 0;
+  };
 
-  render() {
-    return (
-      <div className='container'>
-        <div className='columns'>
-          <StocksList
-            stocks={this.state.stocks}
-            toggleStockSelection={this.toggleStockSelection}
-            resetData={this.resetData}
-            market_trend={this.state.market_trend}
-            areStocksLoaded={this.areStocksLoaded}
-          />
-          <StocksGraph stocks={this.state.stocks} />
-        </div>
-        <div className={ this.props.showSpinner ? 'modal is-active' : 'modal' }>
-          <div className="modal-background"></div>
-          <div className="modal-content">
-            <StocksLoaderStatus connectionError={this.state.connectionError} />
-          </div>
+  return (
+    <div className="container">
+      <div className="columns">
+        <StocksList
+          stocks={stocks}
+          toggleStockSelection={toggleStockSelection}
+          resetData={resetData}
+          market_trend={market_trend}
+          areStocksLoaded={areStocksLoaded}
+        />
+        <StocksGraph stocks={stocks} />
+      </div>
+      <div className={showSpinner ? "modal is-active" : "modal"}>
+        <div className="modal-background"></div>
+        <div className="modal-content">
+          <StocksLoaderStatus connectionError={connectionError} />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
-
-export default Dashboard;
