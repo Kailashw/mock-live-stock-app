@@ -1,26 +1,19 @@
-import React from 'react'
+import React from "react";
 
-class MarketTrendArrow extends React.Component {
+export default function MarketTrendArrow({ current_trend }) {
+  const getArrow = () => {
+    if (current_trend === "up") {
+      return <span className="up-arrow">&#8679;</span>;
+    } else if (current_trend === "down") {
+      return <span className="down-arrow">&#8681;</span>;
+    } else {
+      return "-";
+    }
+  };
 
-  getArrow = () => {
-    if(this.props.current_trend === 'up'){
-      return <span className='up-arrow'>&#8679;</span>
-    }
-    else if(this.props.current_trend === 'down'){
-      return <span className='down-arrow'>&#8681;</span>
-    }
-    else{
-      return '-';
-    }
-  }
-
-  render() {
-    return (
-      <span title='Market trend' className={"icon market-trend"}>
-        {this.getArrow()}
-      </span>
-    );
-  }
+  return (
+    <span title="Market trend" className={"icon market-trend"}>
+      {getArrow()}
+    </span>
+  );
 }
-
-export default MarketTrendArrow;
